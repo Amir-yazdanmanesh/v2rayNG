@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.v2ray.ang.AppConfig
@@ -120,7 +121,7 @@ object V2RayServiceManager {
      * `registerReceiver(Context, BroadcastReceiver, IntentFilter, int)`.
      * Starts the V2Ray core service.
      */
-    fun startCoreLoop(): Boolean {
+    fun startCoreLoop(vpnInterface: ParcelFileDescriptor?): Boolean {
         if (coreController.isRunning) {
             return false
         }
@@ -144,10 +145,14 @@ object V2RayServiceManager {
         }
 
         currentConfig = config
+        var tunFd = vpnInterface?.fd ?: 0
+        if (SettingsManager.isUsingHevTun()) {
+            tunFd = 0
+        }
 
         try {
             NotificationManager.showNotification(currentConfig)
-            coreController.startLoop(result.content)
+            coreController.startLoop(result.content, tunFd)
         } catch (e: Exception) {
             Log.e(AppConfig.TAG, "Failed to start Core loop", e)
             return false
